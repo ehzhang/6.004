@@ -1,0 +1,35 @@
+//metadata {"changes":1026,"simulate":22,"checkoff":7}
+// set up power supply node and logic thresholds
+.global vdd
+VDD vdd gnd 1.0v
+.options vil=0.2 vih=0.8
+
+.include "/shared/jsim/stdcell.jsim"
+.include "/shared/jsim/lab6regfile.jsim"
+
+.subckt regfile clk werf ra2sel ra[4:0] rb[4:0] rc[4:0]
++ wdata[31:0] radata[31:0] rbdata[31:0]
+
+Gregfile memory
++ vdd gnd gnd  ra[4:0]     adata[31:0] // A read port
++ vdd gnd gnd  ra2mux[4:0] bdata[31:0] // B read port
++ gnd clk werf rc[4:0]     wdata[31:0] // write port
++ width=32 nlocations=31
+
+// Find out if either a or b is r31
+XrA31 and5 ra[4:0] a31
+XrB31 and5 ra2mux[4:0] b31
+
+// Route based on if r31 was selected.
+Xa31mux mux2 a31#32 adata[31:0] gnd#32 radata[31:0]
+Xb31mux mux2 b31#32 bdata[31:0] gnd#32 rbdata[31:0]
+
+// RA2SEL mux, Choose between RB and RC
+Xra2sel mux2 ra2sel#5 rb[4:0] rc[4:0] ra2mux[4:0]
+
+.ends
+
+.subckt and5 in[4:0] out
+Xand3 and4 in[4:1] outAnd4
+Xand2 and2 in[0] outAnd4 out
+.ends

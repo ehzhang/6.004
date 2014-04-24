@@ -1,0 +1,33 @@
+//metadata {"changes":1}
+// set up power supply node and logic thresholds
+.global vdd
+VDD vdd gnd 1.0v
+.options vil=0.2 vih=0.8
+
+.include "/shared/jsim/stdcell.jsim"
+.include "/shared/jsim/lab6pc.jsim"  // PC test jig
+
+.subckt pc clk reset ia[31:0]
+  // Mux to select reset or not
+  Xmux mux2 reset#32 inMux[31:0] gnd#32 outMux[31:0]
+  Xreg dreg outMux[31:0] clk#32 ia[31:0]
+  
+  // Plus 4 section!
+  // First two are always going to be zero.
+  // Connect directly from ia[0] and ia[1] to inMux[0], inMux[1]
+  .connect ia[0] inMux[0] 
+  .connect ia[1] inMux[1]
+  
+  // Then, add the four.
+  Xinv inverter ia[2] inMux[2]
+  .connect ia[2] cOut[2]
+  
+  // Then, carry it.
+  Xcarry add0 ia[31:3] cOut[30:2] inMux[31:3] cOut[31:3]
+.ends
+
+// Add 0. Used to propagate any carries.
+.subckt add0 A Cin S Cout
+  Xxor 	xor2 A Cin S
+  Xcout and2 A Cin Cout
+.ends

@@ -1,0 +1,12 @@
+//metadata {"changes":7}
+// set up power supply node and logic thresholds
+.global vdd
+VDD vdd gnd 1.0v
+.options vil=0.2 vih=0.8
+
+.include "/shared/jsim/stdcell.jsim"
+.include "/shared/jsim/lab6ctl.jsim"
+
+.subckt ctl reset id[31:26] ra2sel bsel alufn[4:0] wdsel[1:0] werf moe wr
+// ... your control ROM and other circuitry here ...
+.ends
