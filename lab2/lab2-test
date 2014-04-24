@@ -1,0 +1,20 @@
+// set up power supply node and logic thresholds
+.global vdd
+VDD vdd gnd 1.0v
+.options vil=0.2 vih=0.8
+
+.include "gatelib"
+
+// generate square waves for the input waveforms
+Vin1 a gnd clock(0,1.0,20ns)
+Vin2 b gnd clock(0,1.0,40ns)
+Vin3 c gnd clock(0,1.0,10ns)
+
+// make an instance of the gate to be tested
+Xtest XOR2 a b out
+
+// run through all four combinations of input values
+.tran 40ns
+
+// plot the results for verification
+.plot a b c out

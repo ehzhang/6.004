@@ -1,3 +1,4 @@
+//metadata {"changes":976,"checkoff":2,"simulate":4}
 // set up power supply node and logic thresholds
 .global vdd
 VDD vdd gnd 1.0v

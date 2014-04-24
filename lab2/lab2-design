@@ -1,0 +1,22 @@
+// set up power supply node and logic thresholds
+.global vdd
+VDD vdd gnd 1.0v
+.options vil=0.2 vih=0.8
+
+.include "gatelib"
+
+// generate square waves for the input waveforms
+VB B gnd clock(0,1.0,20ns)
+VA A gnd clock(0,1.0,40ns)
+VCin Cin gnd clock(0,1.0,80ns)
+
+// make an instance of the gate to be tested --
+// assumes FA subckt expects A, B, Cin, S, Cout in that order
+Xtest FA A B Cin S Cout
+
+// run through all eight combinations of input values
+.tran 80ns
+
+// plot the results for verification.  Compare plots against
+// truth table given in the lab writeup.
+.plot Cin A B S Cout

@@ -1,0 +1,18 @@
+.global vdd      // power supply
+VDD vdd gnd 3v
+
+Vol vol gnd 0.3  // marker for Vol
+Voh voh gnd 2.7  // marker for Vol
+
+Vin in gnd 0V    // inverter input
+
+// CMOS inverter: pfet pullup, nfet pulldown
+Pup vdd in out w=38
+Ndn gnd in out
+
+// create VTC: sweep the Vin voltage source over range 0V to 3V,
+// computing the DC operating point of the circuit at each step.
+// Plot vin and vout including markers for Vol and Voh to make
+// measurements easier.
+.dc Vin 0 3 .01
+.plot in out vol voh

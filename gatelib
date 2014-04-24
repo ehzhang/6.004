@@ -1,0 +1,56 @@
+// Gate Library!
+
+// Inverter
+.subckt INV a z
+PupInv vdd a z
+NdnInv gnd a z
+.ends
+
+// 2-input nor
+.subckt NOR2 a b z
+Nb gnd b z
+Na gnd a z
+Pa vdd a n1
+Pb n1 b z
+.ends
+
+// 2-input nand
+.subckt NAND2 a b z
+Nb gnd b n1
+Na n1 a z
+Pa vdd a z
+Pb vdd b z
+.ends
+
+// 3-input nand
+.subckt NAND3 a b c z
+Nc gnd c n1
+Nb n1 b n2
+Na n2 a z
+Pa vdd a z
+Pb vdd b z
+Pc vdd c z
+.ends
+
+// 2-input xor
+.subckt XOR2 a b z
+Xnor NOR2 a b norOut
+Nb gnd b aNdrain
+Nnor gnd norOut z
+Na aNdrain a z
+Pa vdd a Pab
+Pb vdd b Pab
+Pnor Pab norOut z
+.ends
+
+// 2-input Full Adder
+.subckt FA A B Cin S Cout
+
+XxorAB XOR2 B Cin xorBCout
+XxorABC XOR2 A xorBCout S
+
+XabNAND NAND2 A B ABout
+XacNAND NAND2 A Cin ACout
+XbcNAND NAND2 B Cin BCout
+XabcNAND NAND3 ABout ACout BCout Cout
+.ends

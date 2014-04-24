@@ -1,0 +1,33 @@
+// set up power supply node and logic thresholds
+.global vdd
+VDD vdd gnd 1v
+.options vil=0.2 vih=0.8
+
+.include "/shared/jsim/lab1checkoff.jsim"
+.include "gatelib"
+
+// 2-input NAND: inputs are a and b, output is z
+// Taken from the Intro to JSim docs
+// .subckt nand2 a b z 
+// // a local node n1 is created for each instance of nand2
+// N1 z a n1
+// N2 n1 b gnd
+// P1 z a vdd
+// P2 z b vdd
+// .ends
+
+// Actual answer for subcircuit F
+// .subckt F A B C Z
+// Nbdn gnd B outBdn
+// Nadn outBdn A out
+// Ncdn gnd C out
+// Paup vdd A outABup
+// Pbup vdd B outABup
+// Pcup outABup C out
+// Xout inv out Z
+// .ends
+
+// Debugging with the checkoff1 because easier
+.subckt F A B C Z
+Xout xor2 A B Z
+.ends

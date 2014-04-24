@@ -1,0 +1,20 @@
+// set up power supply node and logic thresholds
+.global vdd
+VDD vdd gnd 1.0v
+.options vil=0.2 vih=0.8
+
+.include "/shared/jsim/lab2checkoff.jsim"
+.include "gatelib"
+
+// 3-bit ripple-carry adder
+.subckt adder3 a[2:0] b[2:0] s[3:0]
+// nodes c[1:0] are local to the subcircuit.
+// assumes FA subckt expects A, B, Cin, S, Cout in that order
+// X1 FA a[0] b[0] gnd  s[0] c[0]
+// X2 FA a[1] b[1] c[0] s[1] c[1]
+// X3 FA a[2] b[2] c[1] s[2] s[3]
+
+// note that the three lines above could have
+// been written as a single JSim line:
+Xall FA a[2:0] b[2:0] c[1:0] gnd s[2:0] s[3] c[1:0]
+.ends

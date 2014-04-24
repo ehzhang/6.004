@@ -1,0 +1,108 @@
+// set up power supply node and logic thresholds
+.global vdd
+VDD vdd gnd 1.0v
+.options vil=0.2 vih=0.8
+
+.include "/shared/jsim/stdcell.jsim"
+// .include "/shared/jsim/lab3_test_cmp.jsim"
+.include"/shared/jsim/lab3checkoff_6.jsim"
+
+.subckt BOOL alufn[3:0] A[31:0] B[31:0] OUT[31:0]
+Xm4 mux4 A[31:0] B[31:0] alufn[0]#32 alufn[1]#32 alufn[2]#32 alufn[3]#32 OUT[31:0]
+.ends
+
+// 2-input Full Adder
+.subckt FA A B Cin S Cout
+XxorAB xor2 B Cin xorBCout
+XxorABC xor2 A xorBCout S
+
+XabNAND nand2 A B ABout
+XacNAND nand2 A Cin ACout
+XbcNAND nand2 B Cin BCout
+XabcNAND nand3 ABout ACout BCout Cout
+.ends
+
+// 32-input NOR
+.subckt nor32 a[31:0] z
+Xgroup1 nor4 a[31:28] group1
+Xgroup2 nor4 a[27:24] group2
+Xgroup3 nor4 a[23:20] group3
+Xgroup4 nor4 a[19:16] group4
+Xgroup5 nor4 a[15:12] group5
+Xgroup6 nor4 a[11:8] group6
+Xgroup7 nor4 a[7:4] group7
+Xgroup8 nor4 a[3:0] group8
+Xgroup1_2 nand4 group1 group2 group3 group4 group1_2
+Xgroup2_2 nand4 group5 group6 group7 group8 group2_2
+Xgroup1_3 nor2 group1_2 group2_2 z
+.ends
+
+.subckt ARITH alufn[1:0] A[31:0] B[31:0] OUT[31:0] Z V N
+
+// Invert the B values for adding and subtracting
+Xbxor xor2 B[31:0] alufn[0]#32 XB[31:0]
+Xadder32 FA A[31:0] XB[31:0] Cout[30:0] alufn[0] OUT[31:0] Cout[31:0]
+
+// Z is true if all out is 0
+Xz nor32 OUT[31:0] Z
+
+// V is true if oveflow
+Xv nand2 group1 group2 V
+
+XinvA31 inverter A[31] A31inv
+XinvB31 inverter XB[31] XB31inv
+XinvO31 inverter OUT[31] O31inv
+
+Xgroup1_v nand3 A[31] XB[31] O31inv group1
+Xgroup2_v nand3 A31inv XB31inv OUT[31] group2
+
+// N is true if negative
+.connect OUT[31] N
+
+.ends
+
+.subckt SHIFT alufn[1:0] A[31:0] B[4:0] OUT[31:0]
+
+// Select between switching left or right
+XLorR mux2 alufn[0]#32 Lshift[31:0] Rshift[31:0] OUT[31:0]
+
+// Left shift logic
+XB4_L mux2 B[4]#32 A[31:0]   A[15:0]   gnd#16 W_L[31:0]    // Shift 16
+XB3_L mux2 B[3]#32 W_L[31:0] W_L[23:0] gnd#8  X_L[31:0]    // Shift 8
+XB2_L mux2 B[2]#32 X_L[31:0] X_L[27:0] gnd#4  Y_L[31:0]    // Shift 4
+XB1_L mux2 B[1]#32 Y_L[31:0] Y_L[29:0] gnd#2  Z_L[31:0]    // Shift 2
+XB0_L mux2 B[0]#32 Z_L[31:0] Z_L[30:0] gnd    Lshift[31:0] // Shift 1
+
+// Right shift logic
+// SRA? 
+Xsra mux2 alufn[1] gnd A[31] SRA 
+
+XB4_R mux2 B[4]#32 A[31:0]   SRA#16 A[31:16]  W_R[31:0]    // Shift 16 right
+XB3_R mux2 B[3]#32 W_R[31:0] SRA#8  W_R[31:8] X_R[31:0]    // Shift 8 right
+XB2_R mux2 B[2]#32 X_R[31:0] SRA#4  X_R[31:4] Y_R[31:0]    // Shift 4
+XB1_R mux2 B[1]#32 Y_R[31:0] SRA#2  Y_R[31:2] Z_R[31:0]    // Shift 2
+XB0_R mux2 B[0]#32 Z_R[31:0] SRA    Z_R[31:1] Rshift[31:0] // Shift 1
+
+.ends
+
+.subckt CMP alufn[3] alufn[1] Z V N OUT[31:0]
+Xcnst constant0 OUT[31:1]
+Xcmp mux4 alufn[1] alufn[3] Z lt lte gnd OUT[0]
+Xlt xor2 N V lt
+Xlte or2 Z lt lte
+
+.ends
+
+.subckt alu alufn[4:0] a[31:0] b[31:0] out[31:0] z v n
+
+/// Generate outputs from each of BOOL, SHIFT, ARITH, CMP subcircuits:
+xbool BOOL alufn[3:0] a[31:0] b[31:0] boolout[31:0]
+xshift SHIFT alufn[1:0] a[31:0] b[4:0] shiftout[31:0]
+xarith ARITH alufn[1:0] a[31:0] b[31:0] arithout[31:0] z v n
+xcmp CMP alufn[3] alufn[1] z v n cmpout[31:0]
+
+// Combine them, using three multiplexors:
+xmux1 mux2 alufn[4]#32 nonbool[31:0] boolout[31:0] out[31:0]
+xmux2 mux2 alufn[2]#32 arithshift[31:0] cmpout[31:0] nonbool[31:0]
+xmux3 mux2 alufn[3]#32 arithout[31:0] shiftout[31:0] arithshift[31:0]
+.ends
