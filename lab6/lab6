@@ -1,4 +1,4 @@
-//metadata {"changes":2469,"checkoff":6,"simulate":22}
+//metadata {"changes":1194,"simulate":27,"checkoff":18}
 // set up power supply node and logic thresholds
 .global vdd
 VDD vdd gnd 1.0v
@@ -9,28 +9,44 @@ VDD vdd gnd 1.0v
 .include "lab6/lab6-ctl"
 .include "lab6/lab6-pc"
 .include "lab6/lab6-alu"
-.include "/shared/jsim/lab6basicblock.jsim"  // PC test jig
+.include "/shared/jsim/lab6checkoff.jsim"  // PC test jig
 
 // THAT BETA DOE
-.subckt beta clk reset ia[31:0] id[31:0] ma[31:0] moe mrd[31:0] wr mwd[31:0]
+// .subckt beta clk reset  ia[31:0] id[31:0] ma[31:0] moe mrd[31:0] wr mwd[31:0]
+.subckt beta clk reset irq ia[31:0] id[31:0] ma[31:0] moe mrd[31:0] wr mwd[31:0]
+
+// Interrupt logic
+// Only interrupt if irq and ia[31] = 0
+Xuser inverter ia[31] invUser
+Xinter and2 invUser irq interrupt
 
 // ---------------------------
 // PC
 // ---------------------------
-// PC: clk reset ia[31:0]
-Xpc pc clk reset ia[31:0]
+//  pc clk reset interrupt pcsel[2:0] ia[31:0] jt[31:0]     plus4[31:0] br[31:0]
+Xpc pc clk reset interrupt pcsel[2:0] ia[31:0] radata[31:0] plus4[31:0] br[31:0]
+
+// PC + 4 + 4 * SXT(C)
+// Get the 4 * SXT(C)
+X4sxt connect id[15]#14 id[15:0] gnd#2 sxt4[31:0]
+
+// 32 bit ripple carry
+Xadder32 FA plus4[31:0] sxt4[31:0] Cout[30:0] gnd br[31:0] Cout[31:0]
 
 // ---------------------------
 // CTL
 // ---------------------------
-// CTL: reset id[31:26] ra2sel bsel alufn[4:0] wdsel[1:0] werf moe wr
-Xctl ctl reset id[31:26] ra2sel bsel alufn[4:0] wdsel[1:0] werf moe wr
+// CTL:  reset interrupt id[31:26] pcsel[2:0] z wasel asel ra2sel bsel alufn[4:0] wdsel[1:0] werf moe wr
+Xctl ctl reset interrupt id[31:26] pcsel[2:0] z wasel asel ra2sel bsel alufn[4:0] wdsel[1:0] werf moe wr
+
+// Get the Z value
+Xnor32 nor32 radata[31:0] z
 
 // ---------------------------
 // REGFILE
 // ---------------------------
-// Regfile: regfile clk werf ra2sel ra[4:0] rb[4:0] rc[4:0] wdata[31:0] radata[31:0] rbdata[31:0]
-Xregfile regfile clk werf ra2sel id[20:16] id[15:11] id[25:21]
+// Regfile:      clk werf ra2sel ra[4:0]   rb[4:0]   waddr[4:0] rc[4:0]
+Xregfile regfile clk werf ra2sel id[20:16] id[15:11] waddr[4:0] id[25:21]
 + wdata[31:0] radata[31:0] rbdata[31:0]
 
 Xcon1 connect rbdata[31:0] mwd[31:0]
@@ -39,17 +55,23 @@ Xcon1 connect rbdata[31:0] mwd[31:0]
 // ALU
 // ---------------------------
 // ALU: alufn[4:0] a[31:0] b[31:0] out[31:0] z v n
-Xalu alu alufn[4:0] radata[31:0] aluB[31:0] aluOut[31:0] Z V N
+Xalu alu alufn[4:0] aluA[31:0] aluB[31:0] aluOut[31:0] Z V N
 
 XconMA connect aluOut[31:0] ma[31:0]
 
 // Add. Muxes ----------------
 
+// WASEL
+Xwasel mux2 wasel#5 id[25:21] vdd#4 gnd waddr[4:0]
+
+// ASEL
+Xasel mux2 asel#32 radata[31:0] gnd br[30:0] aluA[31:0]
+
 // BSEL - SEXT
 Xbsel mux2 bsel#32 rbdata[31:0] id[15]#16 id[15:0] aluB[31:0]
 
 // WDSEL
-Xwdsel mux4 wdsel[0]#32 wdsel[1]#32 gnd#32 aluOut[31:0] mrd[31:0] gnd#32 wdata[31:0]
+Xwdsel mux4 wdsel[0]#32 wdsel[1]#32 ia[31] plus4[30:0] aluOut[31:0] mrd[31:0] gnd#32 wdata[31:0]
 
 .ends
 

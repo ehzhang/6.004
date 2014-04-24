@@ -1,4 +1,4 @@
-//metadata {"changes":2681,"simulate":20,"checkoff":20}
+//metadata {"changes":4366,"simulate":24,"checkoff":26}
 // set up power supply node and logic thresholds
 // .global vdd
 // VDD vdd gnd 1.0v
@@ -7,55 +7,87 @@
 // .include "/shared/jsim/stdcell.jsim"
 // .include "/shared/jsim/lab6ctl.jsim"
 
-.subckt ctl reset id[31:26] ra2sel bsel alufn[4:0] wdsel[1:0] werf moe wr
-// ... your control ROM and other circuitry here ...
+.subckt ctl reset interrupt id[31:26] pcsel[2:0] z wasel asel ra2sel bsel alufn[4:0] wdsel[1:0] werf moe wr
+
+// Reset or Interrupt
+Xri or2 reset interrupt ri
+
+// Interrupt control logic:
+// pcsel to 4
+XinterruptPCSEL or2 interrupt#2 ipcsel[1:0] pcsel[1:0]
+
+// wasel to 1
+XinterruptWASEL or2 interrupt xwasel wasel
+
+// werf to 1
+XinterruptWERF or2 interrupt xwerf werf
+
+// wdsel to 0
+XinterruptWDSEL mux2 interrupt#2 xwdsel[1:0] gnd#2 wdsel[1:0] 
 
 // Mux2 for reset
-Xreset mux2 reset xwr gnd wr
+Xreset mux2 ri xwr gnd wr
+
+// Inverse z
+Xinvz inverter z zinv
+
+// Mux2 for z. 0 for BEQ, 1 for BNE
+Xbrmux mux2 id[26] z zinv brz
+
+// Mux2 for PCSEL[0]. If 0, 0. If 1, give appropriate z value (BEQ/BNE)
+Xzmux mux4 xpcsel[0]#2 xpcsel[1]#2
++ xpcsel[1:0] // 00 
++ gnd brz	  // 01
++ xpcsel[1:0] // 11
++ xpcsel[1:0] // 10
++ ipcsel[1:0]
+
+// Interrupt logic
+
 
 Gctl memory vdd gnd gnd id[31:26]    // one read port
-+ pcsel[2:0] wasel asel ra2sel bsel alufn[4:0] wdsel[1:0] werf moe xwr
++ pcsel[2] xpcsel[1:0] xwasel asel ra2sel bsel alufn[4:0] xwdsel[1:0] xwerf moe xwr
 + width=17 nlocations=64 contents=(
-+ 0b00000000000000000 // opcode= 0b000000
-+ 0b00000000000000000 // opcode= 0b000001
-+ 0b00000000000000000 // opcode= 0b000010
-+ 0b00000000000000000 // opcode= 0b000011
-+ 0b00000000000000000 // opcode= 0b000100
-+ 0b00000000000000000 // opcode= 0b000101
-+ 0b00000000000000000 // opcode= 0b000110
-+ 0b00000000000000000 // opcode= 0b000111
-+ 0b00000000000000000 // opcode= 0b001000
-+ 0b00000000000000000 // opcode= 0b001001
-+ 0b00000000000000000 // opcode= 0b001010
-+ 0b00000000000000000 // opcode= 0b001011
-+ 0b00000000000000000 // opcode= 0b001100
-+ 0b00000000000000000 // opcode= 0b001101
-+ 0b00000000000000000 // opcode= 0b001110
-+ 0b00000000000000000 // opcode= 0b001111
-+ 0b00000000000000000 // opcode= 0b010000
-+ 0b00000000000000000 // opcode= 0b010001
-+ 0b00000000000000000 // opcode= 0b010010
-+ 0b00000000000000000 // opcode= 0b010011
-+ 0b00000000000000000 // opcode= 0b010100
-+ 0b00000000000000000 // opcode= 0b010101
-+ 0b00000000000000000 // opcode= 0b010110
-+ 0b00000000000000000 // opcode= 0b010111
++ 0b01110000000000100 // opcode= 0b000000
++ 0b01110000000000100 // opcode= 0b000001
++ 0b01110000000000100 // opcode= 0b000010
++ 0b01110000000000100 // opcode= 0b000011
++ 0b01110000000000100 // opcode= 0b000100
++ 0b01110000000000100 // opcode= 0b000101
++ 0b01110000000000100 // opcode= 0b000110
++ 0b01110000000000100 // opcode= 0b000111
++ 0b01110000000000100 // opcode= 0b001000
++ 0b01110000000000100 // opcode= 0b001001
++ 0b01110000000000100 // opcode= 0b001010
++ 0b01110000000000100 // opcode= 0b001011
++ 0b01110000000000100 // opcode= 0b001100
++ 0b01110000000000100 // opcode= 0b001101
++ 0b01110000000000100 // opcode= 0b001110
++ 0b01110000000000100 // opcode= 0b001111
++ 0b01110000000000100 // opcode= 0b010000
++ 0b01110000000000100 // opcode= 0b010001
++ 0b01110000000000100 // opcode= 0b010010
++ 0b01110000000000100 // opcode= 0b010011
++ 0b01110000000000100 // opcode= 0b010100
++ 0b01110000000000100 // opcode= 0b010101
++ 0b01110000000000100 // opcode= 0b010110
++ 0b01110000000000100 // opcode= 0b010111
 + 0b00000010000010110 // opcode= 0b011000 | LD
 + 0b00000110000000001 // opcode= 0b011001 | ST
-+ 0b00000000000000000 // opcode= 0b011010 
-+ 0b00000000000000000 // opcode= 0b011011 | JMP
-+ 0b00000000000000000 // opcode= 0b011100 | BEQ
-+ 0b00000000000000000 // opcode= 0b011101 | BNE
-+ 0b00000000000000000 // opcode= 0b011110
-+ 0b00000000000000000 // opcode= 0b011111 | LDR
++ 0b01110000000000100 // opcode= 0b011010 
++ 0b01000000000000100 // opcode= 0b011011 | JMP
++ 0b00100000000000100 // opcode= 0b011100 | BEQ
++ 0b00100000000000100 // opcode= 0b011101 | BNE
++ 0b01110000000000100 // opcode= 0b011110
++ 0b00001001101010110 // opcode= 0b011111 | LDR
 + 0b00000000000001100 // opcode= 0b100000 | ADD
 + 0b00000000000101100 // opcode= 0b100001 | SUB
-+ 0b00000000000000000 // opcode= 0b100010 | MUL *
-+ 0b00000000000000000 // opcode= 0b100011 | DIV *
++ 0b00000000000000100 // opcode= 0b100010 | MUL *
++ 0b00000000000000100 // opcode= 0b100011 | DIV *
 + 0b00000000010101100 // opcode= 0b100100 | CMPEQ
 + 0b00000000011101100 // opcode= 0b100101 | CMPLT
 + 0b00000000110101100 // opcode= 0b100110 | CMPLE
-+ 0b00000000000000000 // opcode= 0b100111 
++ 0b01110000000000100 // opcode= 0b100111 
 + 0b00000001100001100 // opcode= 0b101000 | AND
 + 0b00000001111001100 // opcode= 0b101001 | OR
 + 0b00000001011001100 // opcode= 0b101010 | XOR
@@ -63,15 +95,15 @@ Gctl memory vdd gnd gnd id[31:26]    // one read port
 + 0b00000000100001100 // opcode= 0b101100 | SHL
 + 0b00000000100101100 // opcode= 0b101101 | SHR
 + 0b00000000101101100 // opcode= 0b101110 | SRA
-+ 0b00000000000000000 // opcode= 0b101111 
++ 0b01110000000000100 // opcode= 0b101111 
 + 0b00000010000001100 // opcode= 0b110000 | ADDC
 + 0b00000010000101100 // opcode= 0b110001 | SUBC
-+ 0b00000000000000000 // opcode= 0b110010 | MULC *
-+ 0b00000000000000000 // opcode= 0b110011 | DIVC *
++ 0b00000000000000100 // opcode= 0b110010 | MULC *
++ 0b00000000000000100 // opcode= 0b110011 | DIVC *
 + 0b00000010010101100 // opcode= 0b110100 | CMPEQC
 + 0b00000010011101100 // opcode= 0b110101 | CMPLTC
 + 0b00000010110101100 // opcode= 0b110110 | CMPLEC
-+ 0b00000000000000000 // opcode= 0b110111
++ 0b01110000000000100 // opcode= 0b110111
 + 0b00000011100001100 // opcode= 0b111000 | ANDC
 + 0b00000011111001100 // opcode= 0b111001 | ORC
 + 0b00000011011001100 // opcode= 0b111010 | XORC
@@ -79,10 +111,8 @@ Gctl memory vdd gnd gnd id[31:26]    // one read port
 + 0b00000010100001100 // opcode= 0b111100 | SHLC
 + 0b00000010100101100 // opcode= 0b111101 | SHRC
 + 0b00000010101101100 // opcode= 0b111110 | SRAC
-+ 0b00000000000000000 // opcode= 0b111111
++ 0b01110000000000100 // opcode= 0b111111
 
 + )
-
-
 
 .ends

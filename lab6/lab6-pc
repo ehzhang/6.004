@@ -1,4 +1,4 @@
-//metadata {"changes":3,"simulate":3}
+//metadata {"changes":1457,"simulate":6,"checkoff":4}
 // set up power supply node and logichttps://6004.mit.edu/coursewarex/jsim.html#edit_tab5 thresholds
 // .global vdd
 // VDD vdd gnd 1.0v
@@ -7,23 +7,55 @@
 // .include "/shared/jsim/stdcell.jsim"
 // .include "/shared/jsim/lab6pc.jsim"  // PC test jig
 
-.subckt pc clk reset ia[31:0]
-  // Mux to select reset or not
-  Xmux mux2 reset#32 inMux[31:0] gnd#32 outMux[31:0]
-  Xreg dreg outMux[31:0] clk#32 ia[31:0]
+.subckt pc clk reset interrupt pcsel[2:0] ia[31:0] jt[31:0] plus4[31:0] br[31:0]
+
+  // JT logic for supervisor bit
+  XjtAnd and2 ia[31] jt[31] sup
+
+  // Choose for the first 4, PCSEL 0, 1, 2, 3
+  Xmux4 mux4 pcsel[0]#32 pcsel[1]#32 
+  + plus4[31:0]			 	// 000, Standard +4
+  + br[31:0] 				// 001, BEQ/BNE
+  + sup jt[30:0] 			// 010, JT
+  + vdd gnd#28 vdd gnd#2	// 011, ILLOP
+  + out4Mux[31:0]    
+  
+  // If its an XAdr, go to the address constant
+  Xmux2 mux2 pcsel[2]#32 
+  + out4Mux[31:0] 		 // Normal
+  + vdd gnd#27 vdd gnd#3 // 0x80000008
+  + inRESET[31:0]		 // Give it to the reset mux
+  
+  // Reset or interrupt
+  Xri or2 reset interrupt ri
+
+  XresetLoc mux2 interrupt#32 
+  + vdd gnd#31
+  + vdd gnd#27 vdd gnd#3
+  + resetLoc[31:0]
+
+  // Final Mux to select reset or not
+  Xmux mux2 ri#32 
+  + inRESET[31:0] 
+  + resetLoc[31:0] // 0x800000000
+  + outRESET[31:0]
+
+
+
+  Xreg dreg outRESET[31:0] clk#32 ia[31:0]
   
   // Plus 4 section!
   // First two are always going to be zero.
-  // Connect directly from ia[0] and ia[1] to inMux[0], inMux[1]
-  .connect ia[0] inMux[0] 
-  .connect ia[1] inMux[1]
+  // Connect directly from ia[0] and ia[1] to plus4[0], plus4[1]
+  .connect ia[0] plus4[0] 
+  .connect ia[1] plus4[1]
   
   // Then, add the four.
-  Xinv inverter ia[2] inMux[2]
+  Xinv inverter ia[2] plus4[2]
   .connect ia[2] cOut[2]
   
   // Then, carry it.
-  Xcarry add0 ia[31:3] cOut[30:2] inMux[31:3] cOut[31:3]
+  Xcarry add0 ia[31:3] cOut[30:2] plus4[31:3] cOut[31:3]
 .ends
 
 // Add 0. Used to propagate any carries.
