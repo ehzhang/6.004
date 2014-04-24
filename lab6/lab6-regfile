@@ -1,11 +1,11 @@
-//metadata {"changes":1026,"simulate":22,"checkoff":7}
+//metadata {"changes":1027,"simulate":23,"checkoff":7}
 // set up power supply node and logic thresholds
-.global vdd
-VDD vdd gnd 1.0v
-.options vil=0.2 vih=0.8
+// .global vdd
+// VDD vdd gnd 1.0v
+// .options vil=0.2 vih=0.8
 
-.include "/shared/jsim/stdcell.jsim"
-.include "/shared/jsim/lab6regfile.jsim"
+// .include "/shared/jsim/stdcell.jsim"
+// .include "/shared/jsim/lab6regfile.jsim"
 
 .subckt regfile clk werf ra2sel ra[4:0] rb[4:0] rc[4:0]
 + wdata[31:0] radata[31:0] rbdata[31:0]

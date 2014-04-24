@@ -1,11 +1,11 @@
-//metadata {"changes":1}
-// set up power supply node and logic thresholds
-.global vdd
-VDD vdd gnd 1.0v
-.options vil=0.2 vih=0.8
+//metadata {"changes":3,"simulate":3}
+// set up power supply node and logichttps://6004.mit.edu/coursewarex/jsim.html#edit_tab5 thresholds
+// .global vdd
+// VDD vdd gnd 1.0v
+// .options vil=0.2 vih=0.8
 
-.include "/shared/jsim/stdcell.jsim"
-.include "/shared/jsim/lab6pc.jsim"  // PC test jig
+// .include "/shared/jsim/stdcell.jsim"
+// .include "/shared/jsim/lab6pc.jsim"  // PC test jig
 
 .subckt pc clk reset ia[31:0]
   // Mux to select reset or not

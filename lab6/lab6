@@ -1,33 +1,58 @@
-//metadata {"changes":976,"checkoff":2,"simulate":4}
+//metadata {"changes":2469,"checkoff":6,"simulate":22}
 // set up power supply node and logic thresholds
 .global vdd
 VDD vdd gnd 1.0v
 .options vil=0.2 vih=0.8
 
 .include "/shared/jsim/stdcell.jsim"
-.include "/shared/jsim/lab6pc.jsim"  // PC test jig
+.include "lab6/lab6-regfile"
+.include "lab6/lab6-ctl"
+.include "lab6/lab6-pc"
+.include "lab6/lab6-alu"
+.include "/shared/jsim/lab6basicblock.jsim"  // PC test jig
 
-.subckt pc clk reset ia[31:0]
-  // Mux to select reset or not
-  Xmux mux2 reset#32 inMux[31:0] gnd#32 outMux[31:0]
-  Xreg dreg outMux[31:0] clk#32 ia[31:0]
-  
-  // Plus 4 section!
-  // First two are always going to be zero.
-  // Connect directly from ia[0] and ia[1] to inMux[0], inMux[1]
-  .connect ia[0] inMux[0] 
-  .connect ia[1] inMux[1]
-  
-  // Then, add the four.
-  Xinv inverter ia[2] inMux[2]
-  .connect ia[2] cOut[2]
-  
-  // Then, carry it.
-  Xcarry add0 ia[31:3] cOut[30:2] inMux[31:3] cOut[31:3]
+// THAT BETA DOE
+.subckt beta clk reset ia[31:0] id[31:0] ma[31:0] moe mrd[31:0] wr mwd[31:0]
+
+// ---------------------------
+// PC
+// ---------------------------
+// PC: clk reset ia[31:0]
+Xpc pc clk reset ia[31:0]
+
+// ---------------------------
+// CTL
+// ---------------------------
+// CTL: reset id[31:26] ra2sel bsel alufn[4:0] wdsel[1:0] werf moe wr
+Xctl ctl reset id[31:26] ra2sel bsel alufn[4:0] wdsel[1:0] werf moe wr
+
+// ---------------------------
+// REGFILE
+// ---------------------------
+// Regfile: regfile clk werf ra2sel ra[4:0] rb[4:0] rc[4:0] wdata[31:0] radata[31:0] rbdata[31:0]
+Xregfile regfile clk werf ra2sel id[20:16] id[15:11] id[25:21]
++ wdata[31:0] radata[31:0] rbdata[31:0]
+
+Xcon1 connect rbdata[31:0] mwd[31:0]
+
+// ---------------------------
+// ALU
+// ---------------------------
+// ALU: alufn[4:0] a[31:0] b[31:0] out[31:0] z v n
+Xalu alu alufn[4:0] radata[31:0] aluB[31:0] aluOut[31:0] Z V N
+
+XconMA connect aluOut[31:0] ma[31:0]
+
+// Add. Muxes ----------------
+
+// BSEL - SEXT
+Xbsel mux2 bsel#32 rbdata[31:0] id[15]#16 id[15:0] aluB[31:0]
+
+// WDSEL
+Xwdsel mux4 wdsel[0]#32 wdsel[1]#32 gnd#32 aluOut[31:0] mrd[31:0] gnd#32 wdata[31:0]
+
 .ends
 
-// Add 0. Used to propagate any carries.
-.subckt add0 A Cin S Cout
-  Xxor 	xor2 A Cin S
-  Xcout and2 A Cin Cout
+.subckt connect a b
+.connect a b
 .ends
